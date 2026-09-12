@@ -1,96 +1,46 @@
-# 🏗️ Báo Cáo Phân Tích Sâu (Deep-Dive Report) — Vin Smart Future
-**Đơn vị:** Vin Smart Future (Khối Công Nghệ Tập Đoàn Vingroup)  
-**Dự án:** Trợ Lý AI Tối Ưu Hóa & Điều Hướng Trạm Sạc Trống Cho Xe Điện (VinFast & Xanh SM Smart Charging Agent)  
-**Tác giả:** Phùng Quốc Việt (AI Product Engineer)  
-**Đối tác Vận hành:** Khối Hạ Tầng Trạm Sạc VinFast & Đội Xe Xanh SM (GSM)
+# 🏗️ Phase 3 — DEEP-DIVE (Nhóm, 85 min)
 
----
+## 3.2. Problem Statement (6-field) & Metrics (15 min)
+Điền đầy đủ 6 trường thông tin của bài toán:
 
-# 🏗️ Phase 3 — DEEP-DIVE
-
-## 3.1. Current-State Workflow Mapping (Quy Trình Thủ Công Hiện Tại)
-
-Hiện tại, khi tài xế xe điện VinFast hoặc tài xế taxi Xanh SM nhận thấy xe sắp hết pin và cần sạc, quy trình diễn ra qua 4 bước:
-
-```text
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│ Bước 1          │     │ Bước 2          │     │ Bước 3          │     │ Bước 4          │
-│ Xe sắp hết pin, │     │ Xem danh sách   │     │ Lái xe đến nơi  │     │ Tiếp tục phải   │
-│ tài xế mở app   │ ──→ │ các trạm gần    │ ──→ │ mới phát hiện   │ ──→ │ tìm đường sang  │
-│ bản đồ tìm trạm │     │ nhưng không rõ  │     │ hết trụ sạc     │     │ trạm sạc khác   │
-│                 │     │ trụ trống       │     │ hoặc chờ dài 🔴 │     │                 │
-│ Actor: Tài xế   │     │ Actor: Tài xế   │     │ Actor: Tài xế   │     │ Actor: Tài xế   │
-│ ⏱ 2 phút        │     │ ⏱ 5 phút 🔴     │     │ ⏱ 30 phút 🔴    │     │ ⏱ 10 phút       │
-│ In: Cảnh báo pin│     │ In: Vị trí GPS  │     │ In: Trạm đã đầy │     │ In: Tìm trạm mới│
-│ Out: Chọn bừa   │     │ Out: List trạm  │     │ Out: Xếp hàng   │     │ Out: Di chuyển  │
-└─────────────────┘     └─────────────────┘     └─────────────────┘     └─────────────────┘
-
-🔴 = Điểm nghẽn cổ chai (Bottlenecks)
-⏱ Bước tốn thời gian và gây ức chế nhất: Bước 2 & 3 (Tổng thời gian lãng phí: 35 – 45 phút/lượt).
-⚠️ Hậu quả nghiêm trọng: Xe hết trụ sạc phải xếp hàng 30 phút, hoặc pin cạn kiệt không đủ chạy sang trạm thứ hai.
-```
-
----
-
-## 3.2. Problem Statement (6-field) — Tiêu Chuẩn Vin Smart Future
-
-| Trường thông tin | Nội dung chi tiết |
+| Field | Nội dung chi tiết |
 |---|---|
-| **1. Actor / Operator** | Tài xế xe điện VinFast (VF5, VF6, VF8, VF9) và Tài xế taxi Xanh SM (GSM). |
-| **2. Current Workflow** | Khi xe sắp hết pin, tài xế mở app bản đồ xem danh sách các trạm sạc gần nhưng không biết chính xác trạm nào đang có trụ sạc trống phù hợp với cổng sạc của xe. Tài xế lái xe đến nơi mới phát hiện hết trụ sạc hoặc đang có hàng dài xe chờ sạc, buộc phải chờ 30 phút hoặc tiếp tục tìm đường sang trạm khác. |
-| **3. Bottleneck** | **Bước 2 & 3 (30 phút/lượt):** Ứng dụng bản đồ tĩnh không có cơ chế dự báo mức tiêu hao pin thực tế theo địa hình/tắc đường và không cập nhật trạng thái trụ sạc theo thời gian thực (real-time availability), dẫn đến việc tài xế lao vào các trạm sạc đang quá tải hoặc hết chỗ. |
-| **4. Business Impact** | Mỗi lượt chờ đợi 30 phút làm giảm từ 1 đến 2 cuốc xe/ngày của mỗi tài xế Xanh SM, gây thất thoát doanh thu ước tính ~12-15% trên toàn đội xe. Đồng thời gây nghẽn cục bộ tại các trạm sạc lớn trong khu đô thị Vinhomes và trung tâm thương mại Vincom. |
-| **5. Success Metric** | 1. **Hiệu suất (Efficiency):** Giảm thời gian chờ đợi tại trạm sạc từ **30 phút ──> 0 phút** (xe đến nơi có sẵn trụ sạc trống dành riêng hoặc được điều hướng đón đầu chính xác).<br>2. **Độ chính xác (Quality):** Tỷ lệ gợi ý đúng trạm còn trụ sạc trống tương thích cổng CCS2 đạt tối thiểu **98%**.<br>3. **An toàn tuyệt đối (Safety):** 100% trường hợp pin dưới 5% được cảnh báo nguy cấp, ngăn chặn việc di chuyển xa > 5km và kích hoạt xe sạc pin lưu động (Mobile Charger). |
-| **6. Operational Boundary (Ranh giới vận hành)** | **ĐƯỢC PHÉP:** Đọc dữ liệu GPS, mức % pin xe, tra cứu trạng thái thời gian thực của các trụ sạc VinFast, dự báo mức tiêu hao pin và đề xuất lộ trình tối ưu.<br>🛑 **TUYỆT ĐỐI CẤM (Safety Boundaries):**<br>- Mọi văn bản xuất ra bắt buộc phải mang tiền tố `[DRAFT_ONLY]` để tài xế duyệt xác nhận trước khi điều hướng.<br>- Nếu dung lượng pin dưới 5% (`battery < 5%`), TUYỆT ĐỐI KHÔNG được gợi ý trạm sạc cách xa trên 5km vì xe có nguy cơ chết máy giữa đường. BẮT BUỘC lập tức kích hoạt hành động điều xe sạc lưu động: `{"action": "dispatch_mobile_charger", "reason": "<lý do an toàn>"}`.<br>- TUYỆT ĐỐI KHÔNG điều hướng tài xế vào trạm sạc đang có 0 trụ trống (hết chỗ) hoặc trạm đang bảo trì. |
+| **1. Actor / Operator** | Tài xế VinFast (người lái xe điện có hành khách) và Hành khách đang ngồi trên xe. |
+| **2. Current Workflow** | Khi xe báo pin < 5%, tài xế tự mở Google Maps tìm trạm sạc gần nhất (~5–8 phút), tự soạn câu xin lỗi miệng với khách (~2 phút), khách chờ hoặc tự hủy chuyến. Hoàn toàn thủ công, không có thông báo chính thức. |
+| **3. Bottleneck** | Bước tìm kiếm trạm sạc khả dụng trong bán kính 5km phù hợp loại cổng sạc xe (⏱ 5–8 phút) và soạn thông báo xin lỗi khách lịch sự + đề xuất phương án (⏱ 2–3 phút). Tổng ~10 phút, tài xế mất tập trung, khách không được thông báo kịp thời. |
+| **4. Business Impact** | ~80 sự cố/ngày tại TP.HCM & Hà Nội. Gây lãng phí ~13 giờ/ngày (tài xế không chở khách trong lúc tìm trạm). Tỉ lệ review 1 sao liên quan pin yếu chiếm ~30% tổng review tiêu cực VinFast. Tổn thất ước tính ~15 triệu VND doanh thu/ngày do xe dừng tìm trạm. |
+| **5. Success Metric** | 1. Thời gian từ khi pin chạm 5% đến khi tài xế nhận thông tin trạm sạc gần nhất: < 30 giây. 2. Tỉ lệ trạm đề xuất đúng loại cổng sạc & còn trụ trống: ≥ 95%. 3. Hành khách nhận thông báo xin lỗi + ETA trạm sạc trong < 60 giây: 100%. |
+| **6. Operational Boundary** | **ĐƯỢC PHÉP:** Truy xuất API GPS xe, API trạm sạc VinFast (trạng thái trụ, loại cổng, bán kính 5km), soạn thảo thông báo xin lỗi dạng `[DRAFT_ONLY]` hiển thị trên màn hình xe để tài xế xác nhận. **TUYỆT ĐỐI CẤM:** Gửi thông báo đến khách hàng mà không có tài xế/điều phối viên xác nhận; đề xuất trạm sạc ngoài 5km khi pin < 5% (nguy cơ cạn pin giữa đường); tiết lộ tọa độ GPS chính xác của hành khách ra ngoài hệ thống VinFast. |
 
----
+## 3.3. Future-State Flow & AI Fit (25 min)
+* **Xác định mức AI Fit (AI-Fit Matrix):** `[x] LLM Feature` — Quy trình có cấu trúc cố định (pin ngưỡng → tìm trạm → soạn thông báo), không cần Agent tự trị vì rủi ro khi đề xuất sai trạm sạc rất cao (tài xế hết pin giữa đường).
+* **Vẽ Future-State Flow:**
 
-## 3.3. Future-State Flow & AI Fit
-
-### 📊 Đánh Giá Độ Tương Thích AI (AI-Fit Assessment)
-* **Rule-based thuần túy:** Chỉ tìm trạm gần nhất theo bán kính đường thẳng mà không tính được độ tiêu hao pin động và luồng xe đang đổ về trạm sạc.
-* ➔ **LỰA CHỌN TỐI ƯU:** **AI Agent (Agentic Loop kết hợp LLM Feature & Real-time Sensor API):** Agent tự động truy vấn API trạng thái trụ sạc VinFast thời gian thực, tính toán dung lượng pin tiêu hao và đưa ra quyết định điều hướng thông minh.
-
-### 🔄 Sơ Đồ Quy Trình Tương Lai Tích Hợp AI (Future-State Flow)
-
-```text
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│ Bước 1          │     │ Bước 2          │     │ Bước 3          │     │ Bước 4          │
-│ Tài xế yêu cầu  │     │ 🔵 AI Agent     │     │ 🟢 Tài xế       │     │ Xe đến trạm     │
-│ tìm trạm sạc    │ ──→ │ Quét thời gian  │ ──→ │ Nhìn đề xuất    │ ──→ │ cắm sạc ngay    │
-│ qua giọng nói   │     │ thực trụ trống  │     │ [DRAFT_ONLY] &  │     │ không phải chờ  │
-│ ⏱ 3 giây        │     │ & dự báo pin    │     │ bấm xác nhận    │     │ ⏱ 0 phút chờ!   │
-│                 │     │ ⏱ 2 giây        │     │ ⏱ 3 giây        │     │                 │
-└─────────────────┘     └─────────────────┘     └─────────────────┘     └─────────────────┘
-                                                       │
-                          ┌────────────────────────────┴────────────────────────────┐
-                          ▼                                                         ▼
-                  [Trường hợp Bình thường - Pin >= 5%]                       [Trường hợp Nguy cấp - Pin < 5%]
-                  Đề xuất trạm sạc có sẵn trụ trống 100%,                   CẤM điều hướng trạm xa > 5km.
-                  thời gian chờ sạc = 0 phút.                               Kích hoạt ngay xe cứu hộ pin:
-                                                                            `{"action": "dispatch_mobile_charger"}`
-
-                  ↩️ Fallback Plan:
-                  Nếu mất kết nối dữ liệu viễn thông (mất sóng 4G/5G),
-                  hệ thống tự động chuyển sang chế độ Rule-based offline dẫn đường
-                  đến trạm sạc có quy mô lớn nhất (Hub sạc > 20 trụ) gần nhất.
+```
+┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
+│ Bước 1           │    │ Bước 2           │    │ Bước 3           │    │ Bước 4           │
+│ Cảm biến xe phát │    │ 🔵 AI Auto-pull  │    │ 🔵 LLM soạn      │    │ 🟢 Tài xế bấm   │
+│ hiện pin < 5%    │──→ │ GPS + danh sách  │──→ │ [DRAFT_ONLY]     │──→ │ "XÁC NHẬN" trên  │
+│                  │    │ trạm sạc ≤ 5km   │    │ thông báo xin    │    │ màn hình xe để   │
+│ Trigger tự động  │    │ còn trụ trống    │    │ lỗi + chỉ đường  │    │ gửi cho khách    │
+└──────────────────┘    └──────────────────┘    └──────────────────┘    └──────────────────┘
+                                                                               │
+                                                                               ▼
+                                                                    ↩️ Fallback:
+                                                                    Nếu không có trạm ≤ 5km
+                                                                    → JSON dispatch_mobile_charger
+                                                                    + Tài xế tự xử lý thủ công
 ```
 
----
+# 🏁 Phase 5 — EVALUATE (Nhóm, 20 min)
 
-# 🏁 Phase 5 — EVALUATE: Đánh Giá Khả Thi & Quyết Định Đầu Tư
+### AI Readiness Checklist:
+1. [x] Chúng tôi có sẵn dữ liệu mẫu/logs sạch để test? *(VinFast có API trạm sạc thực, GPS xe thực)*
+2. [x] Rủi ro khi AI sai có nằm trong tầm kiểm soát (qua HITL hoặc Fallback)? *(Tài xế phải xác nhận trước khi gửi — HITL bắt buộc; Fallback = xe cứu hộ di động khi không có trạm ≤ 5km)*
+3. [x] Stakeholders sẵn sàng thay đổi quy trình làm việc cũ? *(Tài xế được giảm tải, khách được thông báo nhanh — win-win rõ ràng)*
 
-### ✅ Bảng Kiểm Tra Độ Sẵn Sàng (AI Readiness Checklist)
-1. **[x] Dữ liệu mẫu & Logs sạch:** Nền tảng IoT trạm sạc VinFast đã hỗ trợ giao thức OCPP truyền trạng thái trụ sạc (Trống / Đang sạc / Lỗi) thời gian thực lên hệ sinh thái đám mây.
-2. **[x] Rủi ro sai sót nằm trong tầm kiểm soát:** Gắn nhãn `[DRAFT_ONLY]`, tài xế xác nhận mới chuyển lệnh điều hướng. Cơ chế pin < 5% chốt cứng logic điều xe sạc lưu động.
-3. **[x] Stakeholders sẵn sàng chuyển đổi:** Cả tài xế Xanh SM và người dùng VinFast đều rất hào hứng vì giải quyết trực tiếp nỗi đau chờ đợi 30 phút tại trạm sạc.
+### Quyết định cuối cùng của Ban Giám Đốc Vin Smart Future:
+[x] **GO (Bắt đầu xây dựng Prototype):** Bắt đầu phát triển với scope hẹp.
 
----
-
-### 🏆 Quyết Định Cuối Cùng Của Ban Giám Đốc Vin Smart Future:
-**[x] GO (Bắt đầu xây dựng Prototype kỹ thuật với scope hẹp)**
-
-### 📝 Lý giải quyết định (Justification):
-1. **Loại bỏ lãng phí thời gian:** Đưa thời gian chờ sạc từ 30 phút về **0 phút**, nâng cao trực tiếp chỉ số hài lòng khách hàng và doanh thu cuốc xe của Xanh SM.
-2. **Cân bằng tải mạng lưới:** Tránh dồn xe vào các trạm sạc đang đông, phân bổ thông minh sang các trạm sạc vệ tinh lân cận.
-3. **An toàn pin tuyệt đối:** Ngăn chặn triệt để tình trạng xe cạn pin trên đường thông qua ranh giới an toàn kích hoạt xe sạc lưu động.
+**Justification (Lý giải quyết định dựa trên bằng chứng kỹ thuật và chi phí):**
+> Bài toán có **scope hẹp, rõ ràng**: một trigger duy nhất (pin < 5%), hai output cố định (trạm sạc ≤ 5km + thông báo xin lỗi). Metric thành công đo được ngay (thời gian < 30s, tỉ lệ đề xuất đúng ≥ 95%). Rủi ro được kiểm soát hoàn toàn qua HITL (tài xế xác nhận trước khi gửi) và Fallback cứng (dispatch xe sạc di động). Giải pháp LLM Feature đơn giản hơn Agent — phù hợp với môi trường xe điện realtime. Tổng chi phí vận hành thấp, tác động đến trải nghiệm khách hàng cao và đo được ngay qua tỉ lệ review 1 sao. 
